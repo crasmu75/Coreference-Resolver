@@ -3,6 +3,53 @@ import string
 import sys
 import os
 
+# future hopes and dreams:
+# Looking for proper nouns (nouns capitalized not at beginning of sentence)
+# Plural pronouns without s at the end
+
+pronouns = {"reflexive": {"singular": ["myself",
+                                       "yourself",
+                                       "himself",
+                                       "herself",
+                                       "itself"],
+                          "plural": ["ourselves",
+                                     "yourselves",
+                                     "themselves"]},
+            "relative": {"singular": ['that',
+                                      'when',
+                                      'which',
+                                      'whichever',
+                                      'whichsoever',
+                                      'who',
+                                      'whoever',
+                                      'whosoever',
+                                      'whom',
+                                      'whomever',
+                                      'whomsoever',
+                                      'whose',
+                                      'whosesoever',
+                                      'whatever',
+                                      'whatsoever']},
+            "genderless": {"singular": ["i",
+                                        "me",
+                                        "you",
+                                        "my",
+                                        "mine",
+                                        "your",
+                                        "yours",
+                                        "it"
+                                        "its"
+                                        "that"],
+                           "plural": ["we",
+                                      "us",
+                                      "our",
+                                      "ours",
+                                      "their",
+                                      "theirs",
+                                      "they",
+                                      "them"]}
+            }
+
 
 def remove_punctuation(s):
     exclude = set(string.punctuation)
@@ -19,18 +66,18 @@ def find_acronyms(phrase):
 
     return [f(phrase) for f in rules]
 
-
+# looking for over 50% similarity
 def overlap_similarity(phrase1, phrase2):
     phrase1 = set(remove_punctuation(phrase1).lower().split())
     phrase2 = set(remove_punctuation(phrase2).lower().split())
 
-    return len(phrase1 & phrase2)/len(phrase1 | phrase2)
+    return len(phrase1 & phrase2) / len(phrase1 | phrase2)
 
 
-def find_coreferences(inputFile, outputDir):
-    contents = open(inputFile).read()
-    filename = os.path.basename(inputFile)
-    outputFile = os.path.join(outputDir, filename + '.response')
+def find_coreferences(input_file, output_dir):
+    contents = open(input_file).read()
+    filename = os.path.basename(input_file)
+    outputFile = os.path.join(output_dir, filename + '.response')
 
     # Do stuff here
     newContents = contents
@@ -51,11 +98,12 @@ def main():
 
 
 
-    print find_acronyms('John F. Kennedy')
-    print find_acronyms('National Aeoronautics and Space Administration')
-    print
-    print overlap_similarity('John F. Kennedy', 'John Kennedy')
-    print overlap_similarity('Ford Motor Co.', 'Ford')
+    print(find_acronyms('John F. Kennedy'))
+    print(find_acronyms('National Aeoronautics and Space Administration'))
+    print()
+    print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
+    print(overlap_similarity('Ford Motor Co.', 'Ford'))
+
 
 if __name__ == '__main__':
     main()
