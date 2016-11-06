@@ -1,80 +1,12 @@
-# -*- coding: utf-8 -*-
 from __future__ import division
+import Document
+import references
 import string
 import sys
-import os
-import re
 
 # future hopes and dreams:
 # Looking for proper nouns (nouns capitalized not at beginning of sentence)
 # Plural pronouns without s at the end
-
-pronouns = {"reflexive": {"singular": ["myself",
-                                       "yourself",
-                                       "himself",
-                                       "herself",
-                                       "itself"],
-                          "plural": ["ourselves",
-                                     "yourselves",
-                                     "themselves"]},
-            "relative": {"singular": ['that',
-                                      'when',
-                                      'which',
-                                      'whichever',
-                                      'whichsoever',
-                                      'who',
-                                      'whoever',
-                                      'whosoever',
-                                      'whom',
-                                      'whomever',
-                                      'whomsoever',
-                                      'whose',
-                                      'whosesoever',
-                                      'whatever',
-                                      'whatsoever']},
-            "genderless": {"singular": ["i",
-                                        "me",
-                                        "you",
-                                        "my",
-                                        "mine",
-                                        "your",
-                                        "yours",
-                                        "it"
-                                        "its"
-                                        "that"],
-                           "plural": ["we",
-                                      "us",
-                                      "our",
-                                      "ours",
-                                      "their",
-                                      "theirs",
-                                      "they",
-                                      "them"]}
-            }
-
-masculine_words = ["male",
-                   "boy",
-                   "man",
-                   "guy",
-                   "brother",
-                   "father",
-                   "uncle",
-                   "paternal",
-                   "macho",
-                   "masculine"]
-feminine_words = ["female",
-                  "girl",
-                  "woman",
-                  "lady",
-                  "sister",
-                  "mother",
-                  "aunt",
-                  "maternal",
-                  "feminine"]
-
-# dictionary for each tagged anaphor - maps to it's attributes
-anaphora = {}
-
 
 def remove_punctuation(s):
     exclude = set(string.punctuation)
@@ -95,13 +27,17 @@ def find_acronyms(phrase):
 # intended to take the entire phrase wrapped in the coref tags and an expected gender
 def gender_match(phrase, gender):
     words = phrase.split()
+
     for word in words:
-        word = word.replace("'s", "").replace("ly", "").replace("ish", "")
-        if word in masculine_words:
-            return gender == "male"
-        if word in feminine_words:
-            return gender == "female"
-    return gender == "genderless"
+        word = word.replace('\'s', '').replace('ly', '').replace('ish', '')
+
+        if word in references.masculine_words:
+            return gender == 'masculine'
+            
+        if word in references.feminine_words:
+            return gender == 'feminine'
+
+    return gender == 'genderless'
 
 
 # looking for over 50% similarity
@@ -113,29 +49,36 @@ def overlap_similarity(phrase1, phrase2):
 
 
 def find_coreferences(input_file, output_dir):
-    contents = open(input_file).read()
-    filename = os.path.basename(input_file)
-    outputFile = os.path.join(output_dir, filename + '.response')
+    doc = Document.Document(input_file, output_dir)
 
     # Do stuff here
-
-    # weird quotes are causing the regular expression issues. ” vs "
-    # is currently not matching the beginning tags such as <COREF ID=”1”>
-    # also, XML parsers do not work on these files. There are foreign characters or something isn't formatted correctly
-    # in her files so regex will have to do.
-    # taking out the encoding declaration at the top of the file breaks this
-    targets = re.split("(</?COREF( ID=(”|\")[0-9](”|\"))?>)", contents)
+    tags = doc.get_tags()
     # once this works, do some work to get our anaphora into the dictionary declared above???
-    newContents = contents
 
-    # Writes `newContents` to `outputFile`
-    # target = open(outputFile, 'w')
-    # target.write(newContents)
-    # target.close()
+    for cur in range(len(tags)):
+        print 'current: {}'.format(tags[cur])
+
+        for check in range(cur - 1, -1, -1):
+            print '   {}'.format(tags[check])
+
+            # Chekcs for either an exact match with the entire string or possible
+            # acronymns of the current tag or the tag being checked.
+            if (overlap_similarity(tags[cur][1], tags[check][1]) == 1 or
+                    tags[check][1] in find_acronyms(tags[cur][1]) or
+                    tags[cur][1] in find_acronyms(tags[check][1])):
+
+                doc.add_coref(tags[cur][0], tags[check][0])
+                break
+
+            # If we get this far, there is no string match, so start building probabilities 
+            # for each of the preceding tags and pick the highest (if over some %)
+
+    print
+    print doc.content
 
 
 def main():
-    # Reads the input files and "finds coreferences" in them.
+    # Reads the input files and 'finds coreferences' in them.
     # files = [f.strip() for f in open(sys.argv[1]).readlines()]
     # outputDir = sys.argv[2]
 
@@ -143,19 +86,22 @@ def main():
     #     find_coreferences(file, outputDir)
 
     # reading in example file from project description
-    # find_coreferences("example_input.txt", "Coreference-Resolver")
+    # find_coreferences('example_input.txt', 'Coreference-Resolver')
 
-    print(find_acronyms('John F. Kennedy'))
-    print(find_acronyms('National Aeoronautics and Space Administration'))
-    print()
-    print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
-    print(overlap_similarity('Ford Motor Co.', 'Ford'))
 
-    print(gender_match("The adult male's body", "male"))
-    print(gender_match("womanly presence", "female"))
-    print(gender_match("broken tree branch", "genderless"))
-    print(gender_match("The motherly person", "female"))
-    print(gender_match("The boyish toy", "female"))
+    find_coreferences('test_input.txt', 'output')
+
+    
+    # print(find_acronyms('John F. Kennedy'))
+    # print(find_acronyms('National Aeoronautics and Space Administration'))
+    # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
+    # print(overlap_similarity('Ford Motor Co.', 'Ford'))
+
+    # print(gender_match('The adult male\'s body', 'masculine'))
+    # print(gender_match('womanly presence', 'feminine'))
+    # print(gender_match('broken tree branch', 'genderless'))
+    # print(gender_match('The motherly person', 'feminine'))
+    # print(gender_match('The boyish toy', 'feminine'))
 
 
 if __name__ == '__main__':

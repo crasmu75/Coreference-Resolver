@@ -3,4 +3,4 @@
 dev/
 output/
 
-listfile.txt
+*.pyc
