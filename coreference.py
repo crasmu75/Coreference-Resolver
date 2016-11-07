@@ -24,9 +24,21 @@ def find_acronyms(phrase):
     return [f(phrase) for f in rules]
 
 
+# looking for over 50% similarity
+def overlap_similarity(phrase1, phrase2):
+    phrase1 = set(remove_punctuation(phrase1).lower().split())
+    phrase2 = set(remove_punctuation(phrase2).lower().split())
+
+    return len(phrase1 & phrase2) / len(phrase1 | phrase2)
+
+
+def head_word_match(phrase1, phrase2):
+    return phrase1.lower().split()[-1] == phrase2.lower().split()[-1]
+
+
 # intended to take the entire phrase wrapped in the coref tags
 # intended for use when phrase is not a pronoun.
-def fetch_phrase_gender(phrase):
+def guess_gender(phrase):
     words = phrase.split()
 
     for word in words:
@@ -40,65 +52,53 @@ def fetch_phrase_gender(phrase):
 
     return 'genderless'
 
+def guess_plurality(phrase):
+    # naive approach to singularity
+    return 'plural' if phrase.endswith('s') else 'singular'
 
-# looking for over 50% similarity
-def overlap_similarity(phrase1, phrase2):
-    phrase1 = set(remove_punctuation(phrase1).lower().split())
-    phrase2 = set(remove_punctuation(phrase2).lower().split())
 
-    return len(phrase1 & phrase2) / len(phrase1 | phrase2)
+def get_phrase_attributes(phrase):
+    if phrase in references.pronouns:
+        return set(references.pronouns[phrase])
+    else:
+        return set([guess_gender(phrase), guess_plurality(phrase)])
 
 
 def attribute_similarity(phrase1, phrase2):
-    phrase1 = phrase1.lower()
-    phrase2 = phrase2.lower()
+    phrase1_attrs = get_phrase_attributes(phrase1.lower())
+    phrase2_attrs = get_phrase_attributes(phrase2.lower())
 
-    if phrase1 in references.pronouns:
-        p1plurality = references.pronouns[phrase1][0]
-        p1gender = references.pronouns[phrase1][1]
-    else:
-        # naive approach to singularity
-        p1plurality = ('plural' if phrase1.endswith('s') else 'singular')
-        p1gender = fetch_phrase_gender(phrase1)
-
-    if phrase2 in references.pronouns:
-        p2plurality = references.pronouns[phrase2][0]
-        p2gender = references.pronouns[phrase2][1]
-    else:
-        p2plurality = ('plural' if phrase2.endswith('s') else 'singular')
-        p2gender = fetch_phrase_gender(phrase2)
-
-    return ((1 if p1gender == p2gender else 0) +
-            (1 if p1plurality == p2plurality else 0)) / 2
+    return len(phrase1_attrs & phrase2_attrs) / len(phrase1_attrs | phrase2_attrs)
 
 
 def find_coreferences(input_file, output_dir):
     doc = Document.Document(input_file, output_dir)
-
     tags = doc.get_tags()
 
     for cur in range(len(tags)):
         print('current: {}'.format(tags[cur]))
+        possibilities = []
 
         for check in range(cur - 1, -1, -1):
             print('   {}'.format(tags[check]))
 
             # Chekcs for either an exact match with the entire string or possible
             # acronymns of the current tag or the tag being checked.
-            if (overlap_similarity(tags[cur][1], tags[check][1]) == 1 or
+            if (head_word_match(tags[cur][1], tags[check][1]) or
+                    overlap_similarity(tags[cur][1], tags[check][1]) >= .75 or
                     tags[check][1] in find_acronyms(tags[cur][1]) or
                     tags[cur][1] in find_acronyms(tags[check][1])):
 
                 doc.add_coref(tags[cur][0], tags[check][0])
                 break
 
-            # If we get this far, there is no string match, so start building probabilities 
-            # for each of the preceding tags and pick the highest (if over some %)
+            # Find the score for these two tags and just add it to a list of all scores.
+            score = attribute_similarity(tags[cur][1], tags[check][1])
+            possibilities.append((score, tags[check][0]))
 
-            if attribute_similarity(tags[cur][1], tags[check][1]) == 1:
-                doc.add_coref(tags[cur][0], tags[check][0])
-                break
-
+        # Coref the highest scoring tag if it's over a 75% match
+        if possibilities and max(possibilities)[0] >= .75:
+            doc.add_coref(tags[cur][0], max(possibilities)[1])
 
 
     print
@@ -125,11 +125,11 @@ def main():
     # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
     # print(overlap_similarity('Ford Motor Co.', 'Ford'))
 
-    print(fetch_phrase_gender('The adult male\'s body'))
-    print(fetch_phrase_gender('womanly presence'))
-    print(fetch_phrase_gender('broken tree branch'))
-    print(fetch_phrase_gender('The motherly person'))
-    print(fetch_phrase_gender('The boyish toy'))
+    print(guess_gender('The adult male\'s body'))
+    print(guess_gender('womanly presence'))
+    print(guess_gender('broken tree branch'))
+    print(guess_gender('The motherly person'))
+    print(guess_gender('The boyish toy'))
 
 
 if __name__ == '__main__':
