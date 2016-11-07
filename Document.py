@@ -1,6 +1,7 @@
 import re
 import os
 
+
 class Document(object):
     """docstring for DocumentHandler"""
     def __init__(self, input_file, output_dir):

@@ -24,20 +24,21 @@ def find_acronyms(phrase):
     return [f(phrase) for f in rules]
 
 
-# intended to take the entire phrase wrapped in the coref tags and an expected gender
-def gender_match(phrase, gender):
+# intended to take the entire phrase wrapped in the coref tags
+# intended for use when phrase is not a pronoun.
+def fetch_phrase_gender(phrase):
     words = phrase.split()
 
     for word in words:
-        word = word.replace('\'s', '').replace('ly', '').replace('ish', '')
+        word = word.replace('\'s', '').replace('ly', '').replace('ish', '').replace('grand', '')
 
         if word in references.masculine_words:
-            return gender == 'masculine'
+            return 'masculine'
             
         if word in references.feminine_words:
-            return gender == 'feminine'
+            return 'feminine'
 
-    return gender == 'genderless'
+    return 'genderless'
 
 
 # looking for over 50% similarity
@@ -48,18 +49,39 @@ def overlap_similarity(phrase1, phrase2):
     return len(phrase1 & phrase2) / len(phrase1 | phrase2)
 
 
+def attribute_similarity(phrase1, phrase2):
+    phrase1 = phrase1.lower()
+    phrase2 = phrase2.lower()
+
+    if phrase1 in references.pronouns:
+        p1plurality = references.pronouns[phrase1][0]
+        p1gender = references.pronouns[phrase1][1]
+    else:
+        # naive approach to singularity
+        p1plurality = ('plural' if phrase1.endswith('s') else 'singular')
+        p1gender = fetch_phrase_gender(phrase1)
+
+    if phrase2 in references.pronouns:
+        p2plurality = references.pronouns[phrase2][0]
+        p2gender = references.pronouns[phrase2][1]
+    else:
+        p2plurality = ('plural' if phrase2.endswith('s') else 'singular')
+        p2gender = fetch_phrase_gender(phrase2)
+
+    return ((1 if p1gender == p2gender else 0) +
+            (1 if p1plurality == p2plurality else 0)) / 2
+
+
 def find_coreferences(input_file, output_dir):
     doc = Document.Document(input_file, output_dir)
 
-    # Do stuff here
     tags = doc.get_tags()
-    # once this works, do some work to get our anaphora into the dictionary declared above???
 
     for cur in range(len(tags)):
-        print 'current: {}'.format(tags[cur])
+        print('current: {}'.format(tags[cur]))
 
         for check in range(cur - 1, -1, -1):
-            print '   {}'.format(tags[check])
+            print('   {}'.format(tags[check]))
 
             # Chekcs for either an exact match with the entire string or possible
             # acronymns of the current tag or the tag being checked.
@@ -72,6 +94,12 @@ def find_coreferences(input_file, output_dir):
 
             # If we get this far, there is no string match, so start building probabilities 
             # for each of the preceding tags and pick the highest (if over some %)
+
+            if attribute_similarity(tags[cur][1], tags[check][1]) == 1:
+                doc.add_coref(tags[cur][0], tags[check][0])
+                break
+
+
 
     print
     print doc.content
@@ -89,7 +117,7 @@ def main():
     # find_coreferences('example_input.txt', 'Coreference-Resolver')
 
 
-    find_coreferences('test_input.txt', 'output')
+    find_coreferences('example_files/example_input.txt', 'output')
 
     
     # print(find_acronyms('John F. Kennedy'))
@@ -97,11 +125,11 @@ def main():
     # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
     # print(overlap_similarity('Ford Motor Co.', 'Ford'))
 
-    # print(gender_match('The adult male\'s body', 'masculine'))
-    # print(gender_match('womanly presence', 'feminine'))
-    # print(gender_match('broken tree branch', 'genderless'))
-    # print(gender_match('The motherly person', 'feminine'))
-    # print(gender_match('The boyish toy', 'feminine'))
+    print(fetch_phrase_gender('The adult male\'s body'))
+    print(fetch_phrase_gender('womanly presence'))
+    print(fetch_phrase_gender('broken tree branch'))
+    print(fetch_phrase_gender('The motherly person'))
+    print(fetch_phrase_gender('The boyish toy'))
 
 
 if __name__ == '__main__':

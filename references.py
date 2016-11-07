@@ -27,7 +27,6 @@ pronouns = {
     'someone': ['singular', 'genderless'],
     'something': ['singular', 'genderless'],
     'that': ['singular', 'genderless'],
-    'that': ['singular', 'genderless'],
     'their': ['plural', 'genderless'],
     'theirs': ['plural', 'genderless'],
     'them': ['plural', 'genderless'],
@@ -67,7 +66,7 @@ masculine_words = [
     'paternal',
     'macho',
     'masculine'
-],
+]
 
 feminine_words = [
     'female',
