@@ -7,7 +7,7 @@ class Document(object):
     def __init__(self, input_file, output_dir):
         super(Document, self).__init__()
 
-        filename = os.path.basename(input_file)
+        filename = os.path.splitext(os.path.basename(input_file))[0]
         output_file = os.path.join(output_dir, filename + '.response')
 
         self.input_file = input_file

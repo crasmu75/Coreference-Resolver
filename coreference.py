@@ -76,11 +76,11 @@ def find_coreferences(input_file, output_dir):
     tags = doc.get_tags()
 
     for cur in range(len(tags)):
-        print('current: {}'.format(tags[cur]))
+        # print('current: {}'.format(tags[cur]))
         possibilities = []
 
         for check in range(cur - 1, -1, -1):
-            print('   {}'.format(tags[check]))
+            # print('   {}'.format(tags[check]))
 
             # Chekcs for either an exact match with the entire string or possible
             # acronymns of the current tag or the tag being checked.
@@ -101,23 +101,24 @@ def find_coreferences(input_file, output_dir):
             doc.add_coref(tags[cur][0], max(possibilities)[1])
 
 
-    print
-    print doc.content
+    # print
+    doc.save()
+    # print doc.content
 
 
 def main():
     # Reads the input files and 'finds coreferences' in them.
-    # files = [f.strip() for f in open(sys.argv[1]).readlines()]
-    # outputDir = sys.argv[2]
+    files = [f.strip() for f in open(sys.argv[1]).readlines()]
+    outputDir = sys.argv[2]
 
-    # for file in files:
-    #     find_coreferences(file, outputDir)
+    for f in files:
+        find_coreferences(f, outputDir)
 
     # reading in example file from project description
     # find_coreferences('example_input.txt', 'Coreference-Resolver')
 
 
-    find_coreferences('example_files/example_input.txt', 'output')
+    # find_coreferences('example_files/example_input.txt', 'output')
 
     
     # print(find_acronyms('John F. Kennedy'))
@@ -125,11 +126,11 @@ def main():
     # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
     # print(overlap_similarity('Ford Motor Co.', 'Ford'))
 
-    print(guess_gender('The adult male\'s body'))
-    print(guess_gender('womanly presence'))
-    print(guess_gender('broken tree branch'))
-    print(guess_gender('The motherly person'))
-    print(guess_gender('The boyish toy'))
+    # print(guess_gender('The adult male\'s body'))
+    # print(guess_gender('womanly presence'))
+    # print(guess_gender('broken tree branch'))
+    # print(guess_gender('The motherly person'))
+    # print(guess_gender('The boyish toy'))
 
 
 if __name__ == '__main__':
