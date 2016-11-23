@@ -3,6 +3,7 @@ import Document
 import references
 import string
 import sys
+import re
 
 # future hopes and dreams:
 # Looking for proper nouns (nouns capitalized not at beginning of sentence)
@@ -14,6 +15,8 @@ def remove_punctuation(s):
 
 
 def find_acronyms(phrase):
+    phrase = phrase.lower()
+
     omit = ['by', 'of', 'and']
 
     rules = [
@@ -21,7 +24,7 @@ def find_acronyms(phrase):
         lambda p: ''.join([w[0] for w in p.split()])
     ]
 
-    return [f(phrase) for f in rules]
+    return set([f(phrase) for f in rules])
 
 
 # looking for over 50% similarity
@@ -50,7 +53,6 @@ def guess_gender(phrase):
         if word in references.feminine_words:
             return 'feminine'
 
-    return 'genderless'
 
 def guess_plurality(phrase):
     # naive approach to singularity
@@ -61,7 +63,13 @@ def get_phrase_attributes(phrase):
     if phrase in references.pronouns:
         return set(references.pronouns[phrase])
     else:
-        return set([guess_gender(phrase), guess_plurality(phrase)])
+        gender = guess_gender(phrase)
+        attributes = [guess_plurality(phrase)] 
+
+        if gender != 'genderless':
+            attributes.append(gender)
+
+        return set(attributes)
 
 
 def attribute_similarity(phrase1, phrase2):
@@ -76,14 +84,43 @@ def find_coreferences(input_file, output_dir):
     tags = doc.tags
 
     for anaphor_idx in range(len(tags)):
-        # if tags[anaphor_idx].content in references.pronouns:
-        #     print 'PRONOUN ' + tags[anaphor_idx].content
 
-        for antecedent_idx in range(anaphor_idx -1, -1, -1):
-            if (head_word_match(tags[anaphor_idx].content, tags[antecedent_idx].content)):
-                tags[anaphor_idx].ref = tags[antecedent_idx].id
-                break
+        # Finding string matches
+        if tags[anaphor_idx].content.lower() not in references.pronouns:
+            for antecedent_idx in range(anaphor_idx -1, -1, -1):
+                if (head_word_match(tags[anaphor_idx].content, tags[antecedent_idx].content) or
+                    overlap_similarity(tags[anaphor_idx].content, tags[antecedent_idx].content) >= .5 or
+                    tags[anaphor_idx].content.lower() in find_acronyms(tags[antecedent_idx].content) or
+                    tags[antecedent_idx].content.lower() in find_acronyms(tags[anaphor_idx].content)):
+                    tags[anaphor_idx].ref = tags[antecedent_idx].id
 
+                    if not tags[antecedent_idx].ref:
+                        tags[antecedent_idx].ref = tags[anaphor_idx].id
+
+                    break
+
+        # Look for pronouns
+        else:
+            for antecedent_idx in range(anaphor_idx - 1, max(-1, anaphor_idx - 10), -1):
+                if tags[anaphor_idx].content.lower() == tags[antecedent_idx].content.lower():
+                    tags[anaphor_idx].ref = tags[antecedent_idx].id
+                    if not tags[antecedent_idx].ref:
+                        tags[antecedent_idx].ref = tags[anaphor_idx].id
+
+
+    unmatched_tags = [t for t in doc.tags if not t.ref]
+    counter = 0
+    for tag in unmatched_tags:
+        TAG_RE = re.compile('(?:^|[\s])(' + re.escape(tag.content.lower().split()[-1]) + ')(?:$|[\.\s\,\!\?])')
+
+        matches = re.findall(TAG_RE, doc.content)
+
+        if matches:
+            for match in matches:
+                new_id = 'A' + str(counter)
+                doc.tags.append(Document.Tag(new_id, tag.id, match))
+                tag.ref = new_id
+                counter += 1
 
     # for t in tags:
     #     print t
@@ -93,19 +130,18 @@ def find_coreferences(input_file, output_dir):
 
 def main():
     # Reads the input files and 'finds coreferences' in them.
-    # files = [f.strip() for f in open(sys.argv[1]).readlines()]
-    # outputDir = sys.argv[2]
+    files = [f.strip() for f in open(sys.argv[1]).readlines()]
+    outputDir = sys.argv[2]
 
-    # for f in files:
-    #     find_coreferences(f, outputDir)
+    for f in files:
+        find_coreferences(f, outputDir)
 
     # reading in example file from project description
     # find_coreferences('example_input.txt', 'Coreference-Resolver')
 
 
-    find_coreferences('example_files/example_input.txt', 'output')
+    # find_coreferences('example_files/example_input.txt', 'output')
 
-    
     # print(find_acronyms('John F. Kennedy'))
     # print(find_acronyms('National Aeoronautics and Space Administration'))
     # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))

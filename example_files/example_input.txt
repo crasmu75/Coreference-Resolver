@@ -7,5 +7,5 @@ One person has been killed in a fire has burned more than 3,500 acres in the Ang
 
 <COREF ID="8">The first fire</COREF> has destroyed several structures, including <COREF ID="9">about 30 mobile homes</COREF> in the Lopez Canyon area, said Los Angeles County fire inspector Sam Padilla. <COREF ID="10">The mobile homes</COREF> had been evacuated Sunday.
 
-<COREF ID="A">John F. Kennedy</COREF>did a thing. <COREF ID="B">John F. Kennedy</COREF> did another thing. <COREF ID="C">JFK</COREF> did a third thing.
+<COREF ID="A">John F. Kennedy</COREF>did a thing. <COREF ID="B">John F. Kennedy</COREF> did another thing. <COREF ID="C">JFK</COREF> did a third thing. <COREF ID="E">he</COREF> died.
 </TXT>
