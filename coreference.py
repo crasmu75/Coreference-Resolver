@@ -73,52 +73,37 @@ def attribute_similarity(phrase1, phrase2):
 
 def find_coreferences(input_file, output_dir):
     doc = Document.Document(input_file, output_dir)
-    tags = doc.get_tags()
+    tags = doc.tags
 
-    for cur in range(len(tags)):
-        # print('current: {}'.format(tags[cur]))
-        possibilities = []
+    for anaphor_idx in range(len(tags)):
+        # if tags[anaphor_idx].content in references.pronouns:
+        #     print 'PRONOUN ' + tags[anaphor_idx].content
 
-        for check in range(cur - 1, -1, -1):
-            # print('   {}'.format(tags[check]))
-
-            # Chekcs for either an exact match with the entire string or possible
-            # acronymns of the current tag or the tag being checked.
-            if (head_word_match(tags[cur][1], tags[check][1]) or
-                    overlap_similarity(tags[cur][1], tags[check][1]) >= .75 or
-                    tags[check][1] in find_acronyms(tags[cur][1]) or
-                    tags[cur][1] in find_acronyms(tags[check][1])):
-
-                doc.add_coref(tags[cur][0], tags[check][0])
+        for antecedent_idx in range(anaphor_idx -1, -1, -1):
+            if (head_word_match(tags[anaphor_idx].content, tags[antecedent_idx].content)):
+                tags[anaphor_idx].ref = tags[antecedent_idx].id
                 break
 
-            # Find the score for these two tags and just add it to a list of all scores.
-            score = attribute_similarity(tags[cur][1], tags[check][1])
-            possibilities.append((score, tags[check][0]))
 
-        # Coref the highest scoring tag if it's over a 75% match
-        if possibilities and max(possibilities)[0] >= .75:
-            doc.add_coref(tags[cur][0], max(possibilities)[1])
+    # for t in tags:
+    #     print t
 
-
-    # print
     doc.save()
-    # print doc.content
 
 
 def main():
     # Reads the input files and 'finds coreferences' in them.
-    files = [f.strip() for f in open(sys.argv[1]).readlines()]
-    outputDir = sys.argv[2]
+    # files = [f.strip() for f in open(sys.argv[1]).readlines()]
+    # outputDir = sys.argv[2]
 
-    for f in files:
-        find_coreferences(f, outputDir)
+    # for f in files:
+    #     find_coreferences(f, outputDir)
 
     # reading in example file from project description
     # find_coreferences('example_input.txt', 'Coreference-Resolver')
 
 
-    # find_coreferences('example_files/example_input.txt', 'output')
+    find_coreferences('example_files/example_input.txt', 'output')
 
     
     # print(find_acronyms('John F. Kennedy'))

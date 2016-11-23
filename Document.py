@@ -1,34 +1,44 @@
 import re
 import os
 
-
+class Tag(object):
+    """docstring for Tag"""
+    def __init__(self, id, ref, content):
+        super(Tag, self).__init__()
+        self.id = id
+        self.ref = ref
+        self.content = content
+        
+    def __str__(self):
+        return '<COREF ID="{}" REF="{}">{}</COREF>'.format(self.id, self.ref, self.content)
+        
 class Document(object):
-    """docstring for DocumentHandler"""
+    """docstring for Document"""
     def __init__(self, input_file, output_dir):
         super(Document, self).__init__()
 
         filename = os.path.splitext(os.path.basename(input_file))[0]
-        output_file = os.path.join(output_dir, filename + '.response')
-
-        self.input_file = input_file
-        self.output_file = output_file
-        self.content = open(input_file).read()
+        self.output_file = os.path.join(output_dir, filename + '.response')
         
-    def get_tags(self):
-        TAG_RE = r'<COREF ID="([\w\d]+)">([^<]+)</COREF>'
+        self.content = open(input_file).read()
+        self.tags = self.extract_tags()
+
+    def extract_tags(self):
+        TAG_RE = r'<COREF ID="([\w\d]+)"(?: REF="([\w\d]+)")?>([^<]+)</COREF>'
 
         matches = re.findall(TAG_RE, self.content)
 
         if matches:
-            return matches
+            return [Tag(*x) for x in matches]
 
-    def add_coref(self, tag_id, coref_id):
-        tag = '<COREF ID="{}">'.format(tag_id)
-        new_tag = '<COREF ID="{}" REF="{}">'.format(tag_id, coref_id)
-        self.content = self.content.replace(tag, new_tag)
+    # def add_coref(self, anaphor, antecedent):
+    #     anaphor.ref = antecedent.id
+    #     self.matched_tags.append(anaphor)
 
     def save(self):
-        # Writes `newContents` to `outputFile`
         target = open(self.output_file, 'w')
-        target.write(self.content)
+
+        output = '<TXT>{}</TXT>'.format(''.join(map(str, self.tags)))
+
+        target.write(output)
         target.close()
