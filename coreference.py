@@ -9,6 +9,7 @@ import re
 # Looking for proper nouns (nouns capitalized not at beginning of sentence)
 # Plural pronouns without s at the end
 
+
 def remove_punctuation(s):
     exclude = set(string.punctuation)
     return ''.join(ch for ch in s if ch not in exclude)
@@ -45,13 +46,15 @@ def guess_gender(phrase):
     words = phrase.split()
 
     for word in words:
-        word = word.replace('\'s', '').replace('ly', '').replace('ish', '').replace('grand', '')
+        word = word.replace('\'s', '').replace('ly', '').replace('ish', '').replace('grand', '').replace('.', '')
 
         if word in references.masculine_words:
             return 'masculine'
             
         if word in references.feminine_words:
             return 'feminine'
+
+        return 'genderless'
 
 
 def guess_plurality(phrase):
@@ -60,23 +63,23 @@ def guess_plurality(phrase):
 
 
 def get_phrase_attributes(phrase):
-    if phrase in references.pronouns:
-        return set(references.pronouns[phrase])
-    else:
-        gender = guess_gender(phrase)
-        attributes = [guess_plurality(phrase)] 
+    gender = guess_gender(phrase)
+    attribute = guess_plurality(phrase)
 
-        if gender != 'genderless':
-            attributes.append(gender)
-
-        return set(attributes)
+    return [attribute, gender]
 
 
-def attribute_similarity(phrase1, phrase2):
-    phrase1_attrs = get_phrase_attributes(phrase1.lower())
-    phrase2_attrs = get_phrase_attributes(phrase2.lower())
+# phrase 1 is a pronoun, phrase 2 will not be a pronoun (since we have already checked
+# for exact string matching for pronouns)
+def pronoun_attribute_match(phrase1, phrase2):
+    phrase1_attrs = references.pronouns[phrase1]
 
-    return len(phrase1_attrs & phrase2_attrs) / len(phrase1_attrs | phrase2_attrs)
+    if phrase1_attrs[1] != "genderless":
+        phrase2_attrs = get_phrase_attributes(phrase2.lower())
+        if phrase2_attrs[1] == phrase1_attrs[1]:
+            return True
+
+    return False
 
 
 def find_coreferences(input_file, output_dir):
@@ -106,7 +109,10 @@ def find_coreferences(input_file, output_dir):
                     tags[anaphor_idx].ref = tags[antecedent_idx].id
                     if not tags[antecedent_idx].ref:
                         tags[antecedent_idx].ref = tags[anaphor_idx].id
-
+                elif pronoun_attribute_match(tags[anaphor_idx].content.lower(), tags[antecedent_idx].content.lower()):
+                    tags[anaphor_idx].ref = tags[antecedent_idx].id
+                    if not tags[antecedent_idx].ref:
+                        tags[antecedent_idx].ref = tags[anaphor_idx].id
 
     unmatched_tags = [t for t in doc.tags if not t.ref]
     counter = 0
@@ -122,9 +128,6 @@ def find_coreferences(input_file, output_dir):
                 tag.ref = new_id
                 counter += 1
 
-    # for t in tags:
-    #     print t
-
     doc.save()
 
 
@@ -135,23 +138,6 @@ def main():
 
     for f in files:
         find_coreferences(f, outputDir)
-
-    # reading in example file from project description
-    # find_coreferences('example_input.txt', 'Coreference-Resolver')
-
-
-    # find_coreferences('example_files/example_input.txt', 'output')
-
-    # print(find_acronyms('John F. Kennedy'))
-    # print(find_acronyms('National Aeoronautics and Space Administration'))
-    # print(overlap_similarity('John F. Kennedy', 'John Kennedy'))
-    # print(overlap_similarity('Ford Motor Co.', 'Ford'))
-
-    # print(guess_gender('The adult male\'s body'))
-    # print(guess_gender('womanly presence'))
-    # print(guess_gender('broken tree branch'))
-    # print(guess_gender('The motherly person'))
-    # print(guess_gender('The boyish toy'))
 
 
 if __name__ == '__main__':
