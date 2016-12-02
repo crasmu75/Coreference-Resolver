@@ -1,6 +1,6 @@
 # Coreference Resolution
 
-A program for coreference resolution.
+A program for coreference resolution. Tested on CADE machine lab1-10.
 
 ## Input
 
